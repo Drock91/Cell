@@ -147,6 +147,13 @@ class CellEngine {
         log.info(`[FUTURES] Restored ${savedPositions.length} open position(s) from DB`);
       }
 
+      // Restore peak balance so drawdown halt survives restarts
+      const restoredPeak = this.db.restoreFuturesPeak();
+      if (restoredPeak > 0) {
+        this.safeguards._peakFuturesBalance = restoredPeak;
+        log.info(`[FUTURES] Restored peak balance $${restoredPeak.toFixed(2)} — drawdown tracking continues`);
+      }
+
       const bal = this.futuresExchange.getBalance();
       log.info(`[FUTURES] Sub-account balance: $${bal.toFixed(2)}${restoredBalance !== null ? " (restored)" : " (fresh start)"}`);
     }
@@ -611,6 +618,9 @@ class CellEngine {
 
     if (this.safeguards.isFuturesHalted()) return;
 
+    const maxPositions = fc.maxPositions || 2;
+    if (this._futuresPositions.size >= maxPositions) return;
+
     const pairs     = fc.pairs || [];
     const leverage  = fc.leverage || 2;
     const timeframe = this.config.trading.timeframe;
@@ -660,7 +670,8 @@ class CellEngine {
 
         for (const strategy of this._futuresStrategies) {
           const signal = await strategy.analyze(pair, candles, ticker, context);
-          if (!signal || signal.confidence < (this.config.signals.minConfidence || 0.60)) continue;
+          const futuresMinConf = fc.minConfidence || (this.config.signals.minConfidence || 0.60);
+          if (!signal || signal.confidence < futuresMinConf) continue;
 
           // Futures trade only in the macro direction — no counter-trend positions
           if (!futuresMacroBullish && signal.side === "buy") {
@@ -729,8 +740,11 @@ class CellEngine {
       }
     }
 
-    // Always persist current balance so restarts restore correctly even with no trades
-    if (this.isPaper) this.db.saveFuturesBalance(this.futuresExchange.getBalance());
+    // Always persist current balance + peak so restarts restore drawdown tracking
+    if (this.isPaper) this.db.saveFuturesBalance(
+      this.futuresExchange.getBalance(),
+      this.safeguards._peakFuturesBalance
+    );
   }
 
   async _checkFuturesSLTP() {

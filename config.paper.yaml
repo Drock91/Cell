@@ -95,10 +95,12 @@ futures:
     - XLM/USD                   # correlated with XRP, adds diversification
   leverage: 3                   # 3x — more punch on yield-funded trades
   maxLeverage: 3
-  maxPositionPct: 0.25          # 25% of futures balance per trade
-  maxDrawdownPct: 0.30          # halt futures at 30% drawdown from peak (24h auto-resume)
-  slAtrMult: 4                  # 4×ATR stop — tighter, recycles capital faster
-  tpAtrMult: 8                  # 8×ATR target — 2:1 R:R
+  maxPositionPct: 0.20          # 20% of futures balance per trade
+  maxPositions: 2               # max concurrent open positions across all pairs
+  maxDrawdownPct: 0.20          # halt futures at 20% drawdown from peak (24h auto-resume)
+  minConfidence: 0.75           # futures require higher conviction than spot (leveraged)
+  slAtrMult: 5                  # 5×ATR stop — more room to breathe on 5m noise
+  tpAtrMult: 10                 # 10×ATR target — 2:1 R:R maintained
   minOrderUsd: 5.00
   timeframe: "5m"
 

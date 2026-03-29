@@ -68,6 +68,7 @@ class TradeDB {
       { table: "daily_snapshots", col: "macro_state",    def: "TEXT DEFAULT 'unknown'" },
       { table: "daily_snapshots", col: "futures_halted", def: "INTEGER DEFAULT 0" },
       { table: "futures_positions", col: "open_time",    def: "INTEGER" },
+      { table: "futures_balance",   col: "peak_balance", def: "REAL DEFAULT 0" },
     ];
 
     const existingCols = {};
@@ -224,14 +225,30 @@ class TradeDB {
     }
   }
 
-  saveFuturesBalance(balance) {
+  saveFuturesBalance(balance, peakBalance) {
     try {
-      this.db.prepare(`
-        INSERT OR REPLACE INTO futures_balance (id, balance, updated_at)
-        VALUES (1, ?, datetime('now'))
-      `).run(balance);
+      if (peakBalance !== undefined) {
+        this.db.prepare(`
+          INSERT OR REPLACE INTO futures_balance (id, balance, peak_balance, updated_at)
+          VALUES (1, ?, ?, datetime('now'))
+        `).run(balance, peakBalance);
+      } else {
+        this.db.prepare(`
+          INSERT OR REPLACE INTO futures_balance (id, balance, updated_at)
+          VALUES (1, ?, datetime('now'))
+        `).run(balance);
+      }
     } catch (e) {
       getLogger().error(`DB saveFuturesBalance error: ${e.message}`);
+    }
+  }
+
+  restoreFuturesPeak() {
+    try {
+      const row = this.db.prepare("SELECT peak_balance FROM futures_balance WHERE id = 1").get();
+      return row ? (row.peak_balance || 0) : 0;
+    } catch (e) {
+      return 0;
     }
   }
 
