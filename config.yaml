@@ -1,0 +1,74 @@
+# Cell Configuration - Kraken Only, XRP + XLM Focus
+mode: paper  # paper | live
+startingCapital: 50
+
+exchange:
+  name: kraken
+  sandbox: false
+
+exchange2:
+  enabled: false
+
+trading:
+  pairs:
+    - XRP/USD
+    - XLM/USD
+  exchange2Pairs: []
+  timeframe: "5m"
+  maxOpenPositions: 2
+  maxPositionPct: 0.45         # bigger positions with only 2 tokens
+  stopLossPct: 0.02
+  takeProfitPct: 0.04
+  trailingStopPct: 0.015
+  cooldownMs: 300000
+
+strategies:
+  grid:
+    enabled: false
+    levels: 15
+    spacingPct: 0.003
+    orderSizePct: 0.12
+  meanReversion:
+    enabled: true
+    bbPeriod: 20
+    bbStd: 1.8
+    rsiPeriod: 14
+    rsiOversold: 35
+    rsiOverbought: 65
+  momentum:
+    enabled: false
+    emaFast: 8
+    emaSlow: 21
+    macdSignal: 9
+    volumeThreshold: 1.2
+  accumulator:
+    enabled: true
+    priority:
+      - XRP
+      - XLM
+    dcaIntervalMs: 7200000
+    dcaBasePct: 0.025          # bigger buys with fewer tokens
+    dipThresholdPct: 0.03
+    dipMultiplier: 2.5
+    bigDipThresholdPct: 0.07
+    bigDipMultiplier: 4.0
+    scalpEnabled: true
+    scalpSellPct: 0.15
+    scalpPeakThresholdPct: 0.05
+
+risk:
+  maxDailyLossPct: 0.05
+  maxDrawdownPct: 0.15
+  positionSizing: kelly
+  kellyFraction: 0.25
+
+signals:
+  enabled: true
+  minConfidence: 0.58
+
+telegram:
+  enabled: false
+
+logging:
+  level: info
+  file: cell.log

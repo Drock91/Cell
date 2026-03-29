@@ -1,0 +1,114 @@
+# Paper Trading Config - $10 simulated, tracks what WOULD happen
+mode: paper
+startingCapital: 1000
+instanceName: "PAPER"
+
+exchange:
+  name: kraken
+  sandbox: false   # still reads real prices, just doesn't place orders
+
+exchange2:
+  enabled: false
+
+trading:
+  pairs:
+    - ETH/USD     # 30% allocation — core hold
+    - SOL/USD     # 20% — best growing L1
+    - XRP/USD     # 15% — priority accumulation
+    - XLM/USD     # 15% — priority accumulation
+    - LINK/USD    # 10% — oracle infra
+    - SUI/USD     # 10% — speculative L1
+  exchange2Pairs: []
+  timeframe: "5m"
+  maxOpenPositions: 6
+  maxPositionPct: 0.20        # smaller per-trade max with 6 pairs
+  minOrderUsd: 10.00
+  stopLossPct: 0.02
+  takeProfitPct: 0.05
+  trailingStopPct: 0.015
+  cooldownMs: 60000
+
+strategies:
+  grid:
+    enabled: false
+  meanReversion:
+    enabled: true
+    bbPeriod: 20
+    bbStd: 1.3       # tighter bands = more signal touches
+    rsiPeriod: 14
+    rsiOversold: 45  # catch bounces earlier
+    rsiOverbought: 58
+  momentum:
+    enabled: true
+    emaFast: 8
+    emaSlow: 21
+    macdSignal: 9
+    volumeThreshold: 1.05    # easier to trigger in low-volume conditions
+  accumulator:
+    enabled: true
+    priority:
+      - XRP        # priority = 1.5x size on dips, extra loading on the core bags
+      - XLM
+    dcaIntervalMs: 7200000    # 2h between DCA per pair
+    dcaBasePct: 0.012         # slightly larger base buy
+    dipThresholdPct: 0.02     # trigger dip buys earlier (2% off high)
+    dipMultiplier: 2.5
+    bigDipThresholdPct: 0.06
+    bigDipMultiplier: 3.5
+    scalpEnabled: true
+    scalpSellPct: 0.15
+    scalpPeakThresholdPct: 0.02   # scalp at 2% gain — realistic in sideways/bear market
+
+    # Per-pair DCA allocation — reflects 30% XRP+XLM / 70% rest split
+    perPair:
+      ETH:  { dcaBasePct: 0.025 }   # $25/DCA → ~30% of total DCA budget
+      SOL:  { dcaBasePct: 0.018 }   # $18/DCA → ~20%
+      XRP:  { dcaBasePct: 0.010 }   # $10 base × 1.5 priority = $15 effective → ~15%
+      XLM:  { dcaBasePct: 0.010 }   # $10 base × 1.5 priority = $15 effective → ~15%
+      LINK: { dcaBasePct: 0.010 }   # $10/DCA → ~10%
+      SUI:  { dcaBasePct: 0.010 }   # $10/DCA → ~10%
+
+macroFilter:
+  enabled: true
+  symbol: BTC/USD
+  timeframe: 4h
+  emaPeriod: 50
+  cacheTtlMs: 1800000  # re-check every 30 min
+
+risk:
+  maxDailyLossPct: 0.08
+  maxDrawdownPct: 0.30
+  positionSizing: kelly
+  kellyFraction: 0.25
+
+signals:
+  enabled: true
+  minConfidence: 0.55
+
+futures:
+  enabled: true
+  capitalPct: 0.30              # 30% of startingCapital allocated to futures sub-account
+  pairs:
+    - ETH/USD                   # large cap — cleaner MR signals
+    - SOL/USD                   # high volatility — frequent entries
+    - XRP/USD                   # moves 5-15% in hours — great for both directions
+    - XLM/USD                   # correlated with XRP, adds diversification
+  leverage: 3                   # 3x — more punch on yield-funded trades
+  maxLeverage: 3
+  maxPositionPct: 0.25          # 25% of futures balance per trade
+  maxDrawdownPct: 0.30          # halt futures at 30% drawdown from peak (24h auto-resume)
+  slAtrMult: 4                  # 4×ATR stop — tighter, recycles capital faster
+  tpAtrMult: 8                  # 8×ATR target — 2:1 R:R
+  minOrderUsd: 5.00
+  timeframe: "5m"
+
+capitalRouter:
+  yieldTransferThreshold: 1.00  # min yield (USD) to trigger a futures transfer
+  minSpotReserve: 100.00        # keep $100 liquid for trading — stake everything above this
+
+telegram:
+  enabled: false
+
+logging:
+  level: info
+  file: cell.paper.log

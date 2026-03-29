@@ -1,0 +1,29 @@
+{
+  "name": "cell",
+  "version": "0.1.0",
+  "description": "Cell - Autonomous wealth generation engine",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js --paper --dashboard",
+    "start:paper": "node src/index.js --paper --dashboard",
+    "start:live": "node src/index.js --live --dashboard",
+    "compare": "node src/compare.js",
+    "backtest": "node src/backtest.js",
+    "dashboard:paper": "node src/index.js --paper --dashboard",
+    "dashboard:live": "node src/index.js --live --dashboard",
+    "liquidate": "node scripts/liquidate.js",
+    "liquidate:confirm": "node scripts/liquidate.js --confirm",
+    "reset:paper": "node scripts/reset-paper.js"
+  },
+  "dependencies": {
+    "ccxt": "^4.4.50",
+    "technicalindicators": "^3.1.0",
+    "telegraf": "^4.16.3",
+    "yaml": "^2.6.1",
+    "dotenv": "^16.4.7",
+    "better-sqlite3": "^11.7.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "winston": "^3.17.0"
+  }
+}

@@ -1,0 +1,114 @@
+# Live Trading Config
+mode: live
+startingCapital: 48    # updated 2026-03-27: actual account value ($29 XLM + $19 XRP bags, $0 USDT free)
+instanceName: "LIVE"
+
+exchange:
+  name: kraken
+  sandbox: false
+
+exchange2:
+  enabled: false
+
+trading:
+  pairs:
+    - XRP/USD     # priority accumulation — high volume, liquid
+    - XLM/USD     # priority accumulation
+    - ETH/USD     # mean reversion + momentum — core holding
+    - SOL/USD     # momentum — volatile L1
+    - LINK/USD    # oracle infra — steady accumulation
+  exchange2Pairs: []
+  timeframe: "5m"
+  maxOpenPositions: 4
+  maxPositionPct: 0.18        # 18% max per non-accumulator trade
+  minOrderUsd: 5.00             # lowered: allows scalp-sell recovery with small bags
+  stopLossPct: 0.02           # fallback only — ATR-based stops used by MR + momentum
+  takeProfitPct: 0.05         # fallback only
+  trailingStopPct: 0.015
+  cooldownMs: 120000          # 2 min between signals per pair
+
+strategies:
+  grid:
+    enabled: false
+  meanReversion:
+    enabled: true
+    bbPeriod: 20
+    bbStd: 1.6                # slightly tighter than default for more signals
+    rsiPeriod: 14
+    rsiOversold: 38           # catch oversold earlier than default 32
+    rsiOverbought: 63         # catch overbought earlier
+  momentum:
+    enabled: true
+    emaFast: 8
+    emaSlow: 21
+    macdSignal: 9
+    volumeThreshold: 1.2      # balanced — not too loose, not too strict
+  accumulator:
+    enabled: true
+    priority:
+      - XRP
+      - XLM
+    dcaIntervalMs: 3600000    # 1h per pair — aggressive accumulation
+    dcaBasePct: 0.025         # fallback — overridden per pair below
+    dipThresholdPct: 0.025    # trigger dip buys at 2.5% off high
+    dipMultiplier: 2.5
+    bigDipThresholdPct: 0.06
+    bigDipMultiplier: 3.5
+    scalpEnabled: true
+    scalpSellPct: 0.20           # sell 20% at peaks — larger sell to exceed $5 min order
+    scalpPeakThresholdPct: 0.02  # scalp at 2% gain — lower bar while bags are small
+
+    perPair:
+      XRP:  { dcaBasePct: 0.06 }   # 6% of account per DCA (scales with deposits)
+      XLM:  { dcaBasePct: 0.06 }   # same
+      ETH:  { dcaBasePct: 0.07 }   # largest allocation
+      SOL:  { dcaBasePct: 0.04 }   # smaller — more volatile
+      LINK: { dcaBasePct: 0.04 }   # steady accumulation
+
+macroFilter:
+  enabled: true
+  symbol: BTC/USD
+  timeframe: 4h
+  emaPeriod: 50
+  cacheTtlMs: 1800000         # re-check every 30 min
+
+risk:
+  maxDailyLossPct: 0.04       # halt at 4% daily loss — tight on real money
+  maxDrawdownPct: 0.12        # halt at 12% drawdown
+  coastModePct: 0.025         # coast mode (high-conf only) when up 2.5% on the day
+  positionSizing: kelly
+  kellyFraction: 0.20         # conservative fraction on live
+
+signals:
+  enabled: true
+  minConfidence: 0.60         # slightly lower than before to get more trades
+
+staking:
+  enabled: true               # auto-stake idle USDT via Kraken Earn (~5% APY)
+
+futures:
+  enabled: false              # enable when futures API keys are added to .env
+  capitalPct: 0.25            # 25% to futures when enabled
+  pairs:
+    - XRP/USD
+    - XLM/USD
+    - ETH/USD
+    - SOL/USD
+  leverage: 2
+  maxLeverage: 3
+  maxPositionPct: 0.15
+  maxDrawdownPct: 0.28
+  slAtrMult: 5
+  tpAtrMult: 10
+  minOrderUsd: 5.00
+
+capitalRouter:
+  yieldTransferThreshold: 2.00
+  minSpotReserve: 30.00       # keep $30 free at all times for MR/momentum
+
+telegram:
+  enabled: false
+
+logging:
+  level: info
+  file: cell.live.log
