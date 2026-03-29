@@ -7,7 +7,9 @@ function renderDashboard(engine) {
   const mode      = engine.isPaper ? "PAPER" : "LIVE";
   const now       = new Date().toLocaleTimeString();
 
-  console.clear();
+  // Move cursor to top-left and clear to end-of-screen — keeps scrollback buffer intact
+  // so the user can scroll up to see history. Full console.clear() would wipe it.
+  process.stdout.write("\x1b[H\x1b[J");
 
   // ── Header ──────────────────────────────────────────────────────────────
   console.log(chalk.bold.cyan("  ██████╗███████╗██╗     ██╗"));
@@ -170,6 +172,26 @@ function renderDashboard(engine) {
       ]);
     }
     console.log(tradeTable.toString());
+  }
+
+  // ── Activity log ────────────────────────────────────────────────────────
+  const events = engine._activityLog || [];
+  if (events.length > 0) {
+    console.log(chalk.bold("  Activity"));
+    for (const entry of events.slice(0, 15)) {
+      const isFut    = entry.includes("[FUT]");
+      const isBuy    = entry.includes(" BUY ") || entry.includes(" BAG ");
+      const isSell   = entry.includes(" SELL ") || entry.includes("SCALP");
+      const isClose  = entry.includes("CLOSED");
+      const isWin    = isClose && entry.includes("+");
+      let color = chalk.dim;
+      if (isFut)   color = isClose ? (isWin ? chalk.magenta : chalk.red) : chalk.magenta;
+      else if (isBuy)   color = chalk.green;
+      else if (isSell)  color = chalk.yellow;
+      else if (isClose) color = isWin ? chalk.green : chalk.red;
+      console.log("  " + color(entry));
+    }
+    console.log();
   }
 
   console.log(chalk.dim(`  Win rate: ${(portfolio.winRate * 100).toFixed(0)}%  |  ${portfolio.tradeHistory.length} closed trades  |  updates every 5s  |  Ctrl+C to stop\n`));

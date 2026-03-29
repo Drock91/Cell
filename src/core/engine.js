@@ -47,6 +47,7 @@ class CellEngine {
     this.running = false;
     this._cycleCount = 0;
     this._consecutiveNetworkErrors = 0;
+    this._activityLog = [];  // rolling event feed for dashboard
 
     // Macro filter (optional — only when config.macroFilter.enabled)
     const mfCfg = this.config.macroFilter;
@@ -474,6 +475,7 @@ class CellEngine {
           const trade = this.portfolio.closePosition(pos, currentPrice);
           this.db.recordTrade(trade);
           log.info(`Closed ${pos.pair} via ${reason}: PnL $${trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}`);
+          this._pushActivity(`CLOSED  ${pos.pair.replace("/USD","")} @ $${currentPrice.toFixed(2)}  ${trade.pnl >= 0 ? "+" : ""}$${trade.pnl.toFixed(2)}  [${reason}]`);
         } catch (e) {
           log.error(`Failed to close position ${pos.pair}: ${e.message}`);
         }
@@ -560,11 +562,13 @@ class CellEngine {
         }
       }
 
+      const execTag = signal.accumulate ? "BAG" : signal.side.toUpperCase();
       log.info(
         `EXECUTED ${signal.side.toUpperCase()} ${size.toFixed(6)} ${signal.pair} ` +
         `@ $${signal.price.toFixed(2)} [${signal.strategy}] ` +
         `conf=${(signal.confidence * 100).toFixed(0)}% | ${signal.reason}`
       );
+      this._pushActivity(`${execTag}  ${signal.pair.replace("/USD","")} @ $${signal.price.toFixed(2)}  [$${(size*signal.price).toFixed(0)}] [${signal.strategy}]`);
     } catch (e) {
       log.error(`Order failed for ${signal.pair}: ${e.message}`);
     }
@@ -730,6 +734,7 @@ class CellEngine {
               `@ $${price.toFixed(4)} | SL $${sl.toFixed(4)} | TP $${tp.toFixed(4)} ` +
               `[${signal.strategy}] conf=${(signal.confidence * 100).toFixed(0)}%`
             );
+            this._pushActivity(`[FUT] ${signal.side.toUpperCase()}  ${pair.replace("/USD","")} @ $${price.toFixed(2)}  SL $${sl.toFixed(2)}  conf=${(signal.confidence*100).toFixed(0)}%`);
           } catch (e) {
             log.error(`[FUTURES] openPosition failed: ${e.message}`);
           }
@@ -782,6 +787,7 @@ class CellEngine {
             amount: pos.amount, strategy: pos.strategy || "futures", pnl,
           });
           log.info(`[FUTURES] CLOSED ${pair} via ${reason} | PnL $${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`);
+          this._pushActivity(`[FUT] CLOSED  ${pair.replace("/USD","")}  ${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}  [${reason}]`);
         }
       } catch (e) {
         log.error(`[FUTURES] SLTP check failed for ${pair}: ${e.message}`);
@@ -877,6 +883,12 @@ class CellEngine {
     ].filter(l => l !== null && l !== "");
 
     log.info(lines.join("\n"));
+  }
+
+  _pushActivity(msg) {
+    const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+    this._activityLog.unshift(`${ts}  ${msg}`);
+    if (this._activityLog.length > 25) this._activityLog.length = 25;
   }
 
   async shutdown() {
