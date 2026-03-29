@@ -140,18 +140,28 @@ class FuturesExchange {
 
   /**
    * Close an existing position (reverse side).
+   * entryPrice + leverage required in paper mode to compute correct margin return.
+   * Model: balance gets back (margin + PnL - fee). Full notional is NOT in the balance.
    */
-  async closePosition(symbol, side, amount, price) {
+  async closePosition(symbol, side, amount, price, entryPrice, leverage) {
     const closeSide = side === "buy" ? "sell" : "buy";
-    const proceeds = amount * price;
-    const fee = proceeds * 0.0006;
+    const fee = amount * price * 0.0006;
 
     if (this.isPaper) {
-      this._paperBalance += proceeds - fee;
+      const lev = leverage || this.config.futures?.leverage || 3;
+      const ep  = entryPrice || price; // fallback — no gain/loss if entry unknown
+      const margin = (amount * ep) / lev;
+      const pnl = side === "buy"
+        ? (price - ep) * amount
+        : (ep - price) * amount;
+      const netReturn = margin + pnl - fee;
+
+      this._paperBalance += Math.max(0, netReturn); // can't lose more than margin
       this._fees += fee;
 
-      const dir = side === "buy" ? "LONG" : "SHORT";
-      getLogger().info(`[FUTURES-PAPER] CLOSE ${dir} ${amount.toFixed(4)} ${symbol} @ $${price.toFixed(4)} | +$${(proceeds - fee).toFixed(2)}`);
+      const dir    = side === "buy" ? "LONG" : "SHORT";
+      const pnlStr = pnl >= 0 ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`;
+      getLogger().info(`[FUTURES-PAPER] CLOSE ${dir} ${amount.toFixed(4)} ${symbol} @ $${price.toFixed(4)} | PnL ${pnlStr} | returned $${netReturn.toFixed(2)}`);
 
       return this._paperOrder(symbol, closeSide, amount, price, fee);
     }
@@ -165,11 +175,11 @@ class FuturesExchange {
   }
 
   // Market close for stop-loss / take-profit
-  async closePositionMarket(symbol, side, amount) {
+  async closePositionMarket(symbol, side, amount, entryPrice, leverage) {
     if (this.isPaper) {
       const ticker = await this.fetchTicker(symbol);
       const price = side === "buy" ? (ticker.bid || ticker.last) : (ticker.ask || ticker.last);
-      return this.closePosition(symbol, side, amount, price);
+      return this.closePosition(symbol, side, amount, price, entryPrice, leverage);
     }
 
     const closeSide = side === "buy" ? "sell" : "buy";

@@ -639,7 +639,8 @@ class CellEngine {
         try {
           const ticker = await this.futuresExchange.fetchTicker(pair);
           const price  = ticker.last || ticker.bid || pos.entryPrice;
-          await this.futuresExchange.closePositionMarket(pair, pos.side, pos.amount);
+          const leverage = fc.leverage || 3;
+          await this.futuresExchange.closePositionMarket(pair, pos.side, pos.amount, pos.entryPrice, leverage);
           const pnl = (price - pos.entryPrice) * pos.amount;
           this.safeguards.recordTrade(pnl);
           this._futuresPositions.delete(pair);
@@ -773,7 +774,7 @@ class CellEngine {
         }
 
         if (hit) {
-          await this.futuresExchange.closePositionMarket(pair, pos.side, pos.amount);
+          await this.futuresExchange.closePositionMarket(pair, pos.side, pos.amount, pos.entryPrice, fc.leverage || 3);
           const pnl = pos.side === "buy"
             ? (price - pos.entryPrice) * pos.amount
             : (pos.entryPrice - price) * pos.amount;
