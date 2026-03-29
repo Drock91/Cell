@@ -40,4 +40,11 @@ function getLogger() {
   return logger;
 }
 
-module.exports = { initLogger, getLogger };
+function silenceConsole() {
+  if (!logger) return;
+  for (const t of logger.transports) {
+    if (t.name === "console") t.silent = true;
+  }
+}
+
+module.exports = { initLogger, getLogger, silenceConsole };

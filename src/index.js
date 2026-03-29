@@ -9,7 +9,7 @@
  */
 const path = require("path");
 const { CellEngine } = require("./core/engine");
-const { initLogger, getLogger } = require("./core/logger");
+const { initLogger, getLogger, silenceConsole } = require("./core/logger");
 const { createBot, sendAlert } = require("./telegram");
 const { renderDashboard } = require("./dashboard");
 
@@ -62,8 +62,10 @@ async function main() {
     }
   }
 
-  // Dashboard
+  // Dashboard — silence logger console output so it doesn't fight the render
   if (args.includes("--dashboard")) {
+    silenceConsole();
+    renderDashboard(engine);  // immediate first render
     const dashInterval = setInterval(() => renderDashboard(engine), 5000);
     process.on("SIGINT", () => clearInterval(dashInterval));
   }
